@@ -2,7 +2,6 @@ import spacy
 
 
 def clean(df, col_name="text"):
-
     # whitespaces
     df.loc[:, col_name] = df.loc[:, col_name].replace("(\s)+", " ", regex=True)
 
