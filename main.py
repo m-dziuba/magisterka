@@ -1,21 +1,25 @@
-from tensorflow import keras
-from keras.layers import TextVectorization
-from sklearn.preprocessing import LabelBinarizer
-import pandas as pd
 from pathlib import Path
+
 import joblib
-import optuna
-from optuna.trial import TrialState
 import numpy as np
+import optuna
+import pandas as pd
 import tensorflow as tf
-from models import objective, create_embedding_layer, split_dataset
-from readers import get_models, get_calculated_models, generate_dataset
 from gensim.models import KeyedVectors
+from keras.layers import TextVectorization
+from optuna.trial import TrialState
+from sklearn.preprocessing import LabelBinarizer
+from tensorflow import keras
+
+from models import ModelHandler, create_embedding_layer, load_model
+from readers import generate_datasets, get_finished_embedding_models, get_embedding_models_paths
 
 
 def main(which, x, y, word2vec_model, n_trails=5):
     shape = word2vec_model.vectors.shape
-    vectorizer = TextVectorization(max_tokens=shape[0], output_sequence_length=int(x.str.split().str.len().max()))
+    vectorizer = TextVectorization(
+        max_tokens=shape[0], output_sequence_length=int(x.str.split().str.len().max())
+    )
     vectorizer.adapt(x)
     # dict mapping words to their indices
     voc = vectorizer.get_vocabulary()
@@ -24,16 +28,21 @@ def main(which, x, y, word2vec_model, n_trails=5):
     vectorized_x = vectorizer(np.array([[s] for s in x])).numpy()
     embedding_layer = create_embedding_layer(voc, shape, word2vec_model)
 
-    #create model
+    nn_model = ModelHandler(
+        embedding_layer=embedding_layer,
+        batch_size=256,
+        epochs=100,
+    )
+    # create model
 
-    #test train split
-    x_train, x_valid, y_train, y_valid = split_dataset(vectorized_x, y)
+    # test train split
+    nn_model.set_split_dataset(vectorized_x, y)
 
-    func = lambda trail: objective(trail, which, embedding_layer, x_train, y_train, x_valid, y_valid)
+    func = lambda trail: nn_model.objective(trail, which)
     study = optuna.create_study(
         direction="maximize",
         pruner=optuna.pruners.MedianPruner(),
-        storage="sqlite:///db.sqlite3"
+        storage="sqlite:///db.sqlite3",
     )
     study.optimize(func, n_trials=n_trails)
 
@@ -51,50 +60,43 @@ def main(which, x, y, word2vec_model, n_trails=5):
     return study
 
 
-if __name__ == "__main__":
-
-    tf.get_logger().setLevel('INFO')
-    df = pd.read_csv("data/dane treningowe_I etap.csv")
-    df_2 = pd.read_csv("data/dane testowe.csv")
-    df = pd.concat([df, df_2])
+def training_loop(which):
+    tf.get_logger().setLevel("INFO")
+    df = pd.concat(
+        [
+            pd.read_csv("data/dane treningowe_I etap.csv"),
+            pd.read_csv("data/dane testowe.csv"),
+        ]
+    )
     label_binarizer = LabelBinarizer()
 
-    models = get_models()
+    embedding_models_paths = get_embedding_models_paths()
     bin_y = label_binarizer.fit_transform(df["class"])
-    dataset = generate_dataset()
-    BATCH_SIZE = 255
-    EPOCHS = 100
-    which = "cnn_lstm"
-    modelss = {}
+    dataset = generate_datasets(df)
+    embedding_models_cache = {}
 
-    curr_results = get_calculated_models(f"./results/{which}")
+    results_so_far = get_finished_embedding_models(f"./results/{which}")
 
-    for file_name in models.keys():
+    for file_path in embedding_models_paths.keys():
         result = {}
-        file = models[file_name]
+        file = embedding_models_paths[file_path]
 
-        if file_name in curr_results.keys():
+        if file_path in results_so_far.keys():
             continue
-        if file.name not in modelss.keys():
-            if str(file).endswith(".txt"):
-                print(file.name)
-                modelss[file.name] = KeyedVectors.load_word2vec_format(file, binary=False)
-            elif str(file_name).endswith(".bin"):
-                print(file.name)
-                modelss[file.name] = KeyedVectors.load(str(file))
+
+        if file.name not in embedding_models_cache.keys():
+            embedding_models_cache[file.name] = load_model(file) 
 
         for data in dataset.columns:
-            if data == "no_stopwords":
-                continue
-            if "lemmas" not in data and "lemmas" not in file_name:
-                print(data, file_name)
-                result =  main(which, dataset[data], bin_y, modelss[file.name])
-            elif "lemmas" in data and "forms" not in file_name:
-                print(data, file_name)
-                result = main(which, dataset[data], bin_y, modelss[file.name])
+            if "lemmas" not in data and "lemmas" not in file_path:
+                print(data, file_path)
+                result = main(which, dataset[data], bin_y, embedding_models_cache[file.name])
+            elif "lemmas" in data and "forms" not in file_path:
+                print(data, file_path)
+                result = main(which, dataset[data], bin_y, embedding_models_cache[file.name])
             if result != {}:
-                dest_folder_path = Path(f"./results/{which}/{file_name}/")
+                dest_folder_path = Path(f"./results/{which}/{file_path}/")
                 dest_folder_path.mkdir(parents=True, exist_ok=True)
                 dest_path = dest_folder_path / (data + ".pkl")
-                with dest_path.open('wb') as dest_file:
+                with dest_path.open("wb") as dest_file:
                     joblib.dump(result, dest_file)

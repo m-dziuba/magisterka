@@ -4,7 +4,7 @@ from itertools import combinations_with_replacement
 from pathlib import Path
 
 
-def generate_dataset(input_df):
+def generate_datasets(input_df):
     res = pd.DataFrame()
     possible_functions = {
         "clean": clean,
@@ -21,12 +21,13 @@ def generate_dataset(input_df):
         resulting_df = input_df
         dataset_name = "+".join(func_comb)
         for func in func_comb:
-            resulting_df = possible_functions[func](resulting_df)
+            if "lemmas" not in dataset_name:
+                resulting_df = possible_functions[func](resulting_df)
         res[dataset_name] = resulting_df["text"]
     return res
 
 
-def get_models(models_path="./models"):
+def get_embedding_models_paths(models_path="./models"):
     models_dir = {}
     cwd = Path(models_path)
     for path in cwd.iterdir():
@@ -36,7 +37,7 @@ def get_models(models_path="./models"):
     return models_dir
 
 
-def get_calculated_models(models_path="./results"):
+def get_finished_embedding_models(models_path):
     models_dir = {}
     cwd = Path(models_path)
     for path in cwd.iterdir():
