@@ -24,9 +24,7 @@ class ModelHandler:
 
     def new_trial(self, trial):
         self.first_layer_size = trial.suggest_int("lstm_first_layer_size", 16, 256)
-        self.second_layer_size = trial.suggest_int(
-            "lstm_second_layer_size", 16, 256
-        )
+        self.second_layer_size = trial.suggest_int("lstm_second_layer_size", 16, 256)
         self.third_layer_size = trial.suggest_int("lstm_third_layer_size", 16, 256)
         self.learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-1, log=True)
 
@@ -67,12 +65,40 @@ class ModelHandler:
                         return_sequences=True,
                     ),
                 ),
-                layers.Conv1D(self.second_layer_size, kernel_size=3, activation="relu", padding="same"),
+                layers.Conv1D(
+                    self.second_layer_size,
+                    kernel_size=3,
+                    activation="relu",
+                    padding="same",
+                ),
                 layers.GlobalMaxPooling1D(),
                 layers.Dense(1, activation="sigmoid"),
             ]
         )
         return self.compile_model(model)
+
+    def make_bidirectional_lstm_cnn_nlp_keras_model(self):
+        words = layers.Input(shape=(None,))
+        x = self.embedding_layer(words)
+        x = layers.SpatialDropout1D(0.3)(x)
+        x = layers.Bidirectional(layers.LSTM(self.first_layer_size, return_sequences=True))(x)
+        x = layers.Bidirectional(layers.LSTM(self.second_layer_size, return_sequences=True))(x)
+
+        hidden = layers.concatenate(
+            [
+                layers.GlobalMaxPooling1D()(x),
+                layers.GlobalAveragePooling1D()(x),
+            ]
+        )
+        # hidden = layers.add([hidden, layers.Dense(self.third_layer_size, activation="relu")(hidden)])
+        # hidden = layers.add([hidden, layers.Dense(DENSE_HIDDEN_UNITS, activation="relu")(hidden)])
+        result = layers.Dense(1, activation="sigmoid")(hidden)
+        aux_result = layers.Dense(1, activation="sigmoid")(hidden)
+
+        model = Model(inputs=words, outputs=[result, aux_result])
+        model.compile(loss="binary_crossentropy", optimizer="adam")
+
+        return model
 
     def compile_model(self, model) -> Model:
         model.compile(
@@ -88,7 +114,7 @@ class ModelHandler:
         elif which == "in_series":
             return self.create_in_series_model()
         elif which == "cnn_lstm":
-            return self.create_cnn_lstm_model()
+            return self.make_bidirectional_lstm_cnn_nlp_keras_model()
         else:
             raise NotImplementedError
 
