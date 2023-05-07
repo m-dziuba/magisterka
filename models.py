@@ -130,7 +130,7 @@ class ModelHandler:
             self.x_train,
             self.y_train,
             batch_size=self.batch_size,
-            callbacks=[TFKerasPruningCallback(trial, "val_acc")],
+            callbacks=[TFKerasPruningCallback(trial, "val_loss")],
             epochs=self.epochs,
             validation_data=(self.x_valid, self.y_valid),
             verbose="1",
