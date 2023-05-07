@@ -21,8 +21,7 @@ def generate_datasets(input_df):
         resulting_df = input_df
         dataset_name = "+".join(func_comb)
         for func in func_comb:
-            if "lemmas" not in dataset_name:
-                resulting_df = possible_functions[func](resulting_df)
+            resulting_df = possible_functions[func](resulting_df)
         res[dataset_name] = resulting_df["text"]
     return res
 

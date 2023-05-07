@@ -15,7 +15,7 @@ from models import ModelHandler, create_embedding_layer, load_model
 from readers import generate_datasets, get_finished_embedding_models, get_embedding_models_paths
 
 
-def main(which, x, y, word2vec_model, n_trails=5):
+def main(which, x, y, word2vec_model, n_trails=20):
     shape = word2vec_model.vectors.shape
     vectorizer = TextVectorization(
         max_tokens=shape[0], output_sequence_length=int(x.str.split().str.len().max())
