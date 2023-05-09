@@ -114,7 +114,7 @@ class ModelHandler:
         elif which == "in_series":
             return self.create_in_series_model()
         elif which == "cnn_lstm":
-            return self.make_bidirectional_lstm_cnn_nlp_keras_model()
+            return self.create_cnn_lstm_model()
         else:
             raise NotImplementedError
 
@@ -130,7 +130,7 @@ class ModelHandler:
             self.x_train,
             self.y_train,
             batch_size=self.batch_size,
-            callbacks=[TFKerasPruningCallback(trial, "val_loss")],
+            callbacks=[TFKerasPruningCallback(trial, "val_acc")],
             epochs=self.epochs,
             validation_data=(self.x_valid, self.y_valid),
             verbose="1",
