@@ -62,6 +62,7 @@ def tokenize(df, col_name="text"):
 def remove_stopwords(df, col_name="text"):
     pl = spacy.load("pl_core_news_lg")
     stopwords = pl.Defaults.stop_words
+    print(stopwords)
     df[col_name] = df[col_name].apply(lambda x: " ".join([word for word in x.split() if word not in stopwords]))
     return df
 

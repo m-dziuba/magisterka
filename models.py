@@ -1,11 +1,10 @@
 import numpy as np
-import tensorflow as tf
 from gensim.models import KeyedVectors
 from keras import Model, backend, initializers, layers, models
 from keras.optimizers import Adam
 from optuna.integration import TFKerasPruningCallback
 from sklearn.model_selection import train_test_split
-from tensorflow import keras
+from keras.utils import plot_model
 
 
 class ModelHandler:
@@ -41,6 +40,8 @@ class ModelHandler:
                 layers.Dense(1, activation="sigmoid"),
             ]
         )
+
+        plot_model(model, to_file="basic.png")  
         return self.compile_model(model)
 
     def create_in_series_model(self) -> Model:
@@ -53,6 +54,7 @@ class ModelHandler:
                 layers.Dense(1, activation="sigmoid"),
             ]
         )
+        plot_model(model, to_file="in_series.png")  
         return self.compile_model(model)
 
     def create_cnn_lstm_model(self) -> Model:
@@ -75,6 +77,7 @@ class ModelHandler:
                 layers.Dense(1, activation="sigmoid"),
             ]
         )
+        plot_model(model, to_file="cnn.png")  
         return self.compile_model(model)
 
     def make_bidirectional_lstm_cnn_nlp_keras_model(self):

@@ -1,4 +1,4 @@
 from main import training_loop
-for model in ["cnn_lstm", ]:
+for model in ["basic", ]:
     training_loop(model)
 

@@ -9,7 +9,7 @@ def generate_datasets(input_df):
     possible_functions = {
         "clean": clean,
         "no_stopwords": remove_stopwords,
-        "lemmas": lemmatize,
+        #"lemmas": lemmatize,
     }
     possible_datasets = set()
 
